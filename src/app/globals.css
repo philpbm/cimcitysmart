@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import "leaflet/dist/leaflet.css";
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+@media print { aside, header, .leaflet-control-container { display: none !important; } }

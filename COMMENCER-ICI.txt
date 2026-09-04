@@ -1,0 +1,27 @@
+CIMSYSTEM — application full-stack (Next.js + Prisma + Neon + Vercel)
+====================================================================
+
+DEMARRAGE RAPIDE (local)
+------------------------
+1) Base Neon : neon.tech > New Project > Connect > copier l'URL "Pooled connection".
+2) cp .env.example .env   puis renseigner :
+     DATABASE_URL   = l'URL Neon (pooled, ...sslmode=require)
+     AUTH_SECRET    = resultat de : openssl rand -base64 32
+     ADMIN_EMAIL / ADMIN_PASSWORD = compte gestionnaire
+     CLE_AMORCAGE   = un mot de passe long
+3) npm install
+4) npm run setup      (cree les tables + insere les donnees de demonstration)
+5) npm run dev        -> http://localhost:3000
+     Interface :            http://localhost:3000
+     Preuve base de donnees http://localhost:3000/donnees
+
+DEPLOIEMENT (Vercel)
+--------------------
+1) Pousser ce dossier sur GitHub.
+2) Vercel > Add New > Project > importer le depot.
+3) Environment Variables : DATABASE_URL, AUTH_SECRET, ADMIN_EMAIL,
+   ADMIN_PASSWORD, CLE_AMORCAGE.
+4) Deploy.
+5) Ouvrir une fois : https://VOTRE-DOMAINE/api/amorcage?cle=CLE_AMORCAGE
+
+Voir README.md pour le detail complet.

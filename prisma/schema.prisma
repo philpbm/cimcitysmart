@@ -1,0 +1,164 @@
+// CIMSYSTEM — schéma de base de données (PostgreSQL / Neon)
+// Convention : identifiants cuid, noms de champs en français.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Agents communaux et comptes de service.
+model Utilisateur {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  motDePasse String
+  nom        String
+  role       String   @default("GESTIONNAIRE") // ADMIN | GESTIONNAIRE | AGENT | FOSSOYEUR | LECTURE
+  cree       DateTime @default(now())
+
+  // double authentification (TOTP)
+  mfaSecret   String?
+  mfaActive   Boolean   @default(false)
+  mfaCodes    String? // JSON : codes de secours hachés
+  mfaActiveLe DateTime?
+}
+
+/// Un cimetière géré par la commune.
+model Cimetiere {
+  id      String  @id @default(cuid())
+  nom     String  @unique
+  commune String  @default("Namur")
+  lat     Float?
+  lng     Float?
+  cree    DateTime @default(now())
+
+  concessions Concession[]
+}
+
+/// Une concession (emplacement concédé) et son cycle de vie.
+model Concession {
+  id          String   @id @default(cuid())
+  ref         String   @unique // ex. ALM/T1
+  cimetiere   Cimetiere @relation(fields: [cimetiereId], references: [id], onDelete: Cascade)
+  cimetiereId String
+  nature      String // pleine_terre | caveau | columbarium | cavurne | dispersion | ossuaire | pelouse_honneur ...
+  statut      String   @default("octroyee") // libre | octroyee | renouvellement | echue | reprise | archive
+  denom1      String   @default("")
+  denom2      String   @default("")
+  octroi      String? // AAAA-MM-JJ ou AAAA
+  expiration  String?
+  duree       String? // "15 ans" | "30 ans" | "50 ans" | "Perpétuelle"
+  placesTot   Int      @default(1)
+  placesOcc   Int      @default(0)
+  cree        DateTime @default(now())
+  majLe       DateTime @updatedAt
+
+  personnes   Personne[]
+  inhumations Inhumation[]
+  monument    Monument?
+  deliberations Deliberation[]
+  commandesQR CommandeQR[]
+
+  @@index([cimetiereId])
+  @@index([statut])
+  @@index([nature])
+}
+
+/// Concessionnaire, bénéficiaire ou responsable rattaché à une concession.
+model Personne {
+  id           String     @id @default(cuid())
+  concession   Concession @relation(fields: [concessionId], references: [id], onDelete: Cascade)
+  concessionId String
+  role         String // CONCESSIONNAIRE | BENEFICIAIRE | RESPONSABLE
+  nom          String
+  prenom       String   @default("")
+  nn           String? // numéro national
+  lieuNaiss    String?
+  naissance    String?
+  adresse      String?
+
+  @@index([concessionId])
+  @@index([nom])
+}
+
+/// Un défunt inhumé dans la concession.
+model Inhumation {
+  id             String     @id @default(cuid())
+  concession     Concession @relation(fields: [concessionId], references: [id], onDelete: Cascade)
+  concessionId   String
+  nom            String
+  naissance      String?
+  deces          String?
+  dateInhum      String?
+  pompesFunebres String?
+
+  @@index([concessionId])
+  @@index([nom])
+}
+
+/// Le monument / la pierre tombale (un par concession).
+model Monument {
+  id           String     @id @default(cuid())
+  concession   Concession @relation(fields: [concessionId], references: [id], onDelete: Cascade)
+  concessionId String     @unique
+  marbrier     String?
+  sculpteur    String?
+  materiau     String?
+  etat         String?
+}
+
+/// Point de délibération envoyé à iA.Délib (iMio).
+model Deliberation {
+  id           String      @id @default(cuid())
+  extId        String      @unique // identifiant externe (externalIdentifier)
+  concession   Concession? @relation(fields: [concessionId], references: [id], onDelete: SetNull)
+  concessionId String?
+  objet        String
+  type         String // meeting-config-college | meeting-config-council
+  categorie    String  @default("")
+  groupe       String  @default("")
+  statut       String  @default("Envoyé") // Brouillon | Envoyé | Inscrit (séance) | Décidé — accepté | Reporté
+  seanceDate   String?
+  cree         DateTime @default(now())
+
+  @@index([concessionId])
+}
+
+/// Commande d'une plaque QR mémorielle (partenaire Forever Connected).
+model CommandeQR {
+  id           String      @id @default(cuid())
+  concession   Concession? @relation(fields: [concessionId], references: [id], onDelete: SetNull)
+  concessionId String?
+  defunt       String      @default("")
+  produit      String
+  prix         String      @default("")
+  statut       String      @default("Commandé") // Commandé | Expédié | Reçu | Activé (page en ligne)
+  tribute      String      @default("") // URL page d'hommage (qreb.eu)
+  courriel     String?
+  cree         DateTime    @default(now())
+
+  @@index([concessionId])
+}
+
+/// Déclaration de décès / demande d'inhumation déposée par une entreprise de pompes funèbres.
+model Declaration {
+  id             String   @id @default(cuid())
+  defuntNom      String
+  defuntNaissance String?
+  defuntDeces    String?
+  operateurPF    String   @default("")
+  typeCeremonie  String   @default("") // inhumation | cremation | dispersion
+  cimetiere      String?
+  concessionRef  String?
+  dateSouhaitee  String?
+  statut         String   @default("recue") // recue | complement | acceptee | refusee | planifiee
+  notes          String?
+  cree           DateTime @default(now())
+  majLe          DateTime @updatedAt
+
+  @@index([statut])
+}
+
