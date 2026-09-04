@@ -2580,11 +2580,14 @@ function Login({commune,onLogin}){
   const [step,setStep]=useState(1);
   const [u,setU]=useState("");const [p,setP]=useState("");const [code,setCode]=useState("");const [err,setErr]=useState("");
   const [mfaReq,setMfaReq]=useState(false);
-  const submit=()=>{if(!u.trim()||!p){setErr("Identifiant et mot de passe requis.");return;}setErr("");
-    connexion(u.trim(),p).then(r=>setMfaReq(!!(r&&r.mfaRequired))).catch(()=>{});
-    setStep(2);};
-  const verify=()=>{if(code.replace(/\D/g,"").length<6){setErr("Entrez le code à 6 chiffres.");return;}
-    if(mfaReq)verifierMfa(code).catch(()=>{});
+  const [busy,setBusy]=useState(false);
+  const submit=async()=>{if(!u.trim()||!p){setErr("Identifiant et mot de passe requis.");return;}setErr("");setBusy(true);
+    const r=await connexion(u.trim(),p);setBusy(false);
+    if(!r){setErr("Identifiants invalides.");return;}
+    if(r.mfaRequired){setMfaReq(true);setStep(2);}else{onLogin(u.trim());}};
+  const verify=async()=>{if(code.replace(/\D/g,"").length<6){setErr("Entrez le code à 6 chiffres.");return;}setBusy(true);
+    const r=await verifierMfa(code);setBusy(false);
+    if(!r){setErr("Code invalide.");return;}
     onLogin(u.trim());};
   return(<div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-[#CD0947] via-[#a50b39] to-[#6d0a29] p-4" style={{fontFamily:"Inter,ui-sans-serif,system-ui,sans-serif"}}>
     <div className="w-full max-w-sm rounded-2xl bg-white p-7 shadow-2xl">
@@ -2594,18 +2597,18 @@ function Login({commune,onLogin}){
         <div className="text-[11px] text-slate-400">Gestion des cimetières · {commune}</div>
       </div>
       {step===1?<div className="space-y-3">
-        <Field label="Identifiant"><Inp value={u} onChange={e=>setU(e.target.value)} placeholder="prenom.nom"/></Field>
+        <Field label="Adresse e-mail"><Inp value={u} onChange={e=>setU(e.target.value)} placeholder="adresse e-mail (compte gestionnaire)"/></Field>
         <Field label="Mot de passe"><Inp type="password" value={p} onChange={e=>setP(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="••••••••"/></Field>
         {err&&<div className="rounded-md bg-red-50 px-2.5 py-1.5 text-[11.5px] text-red-700">{err}</div>}
         <button onClick={submit} className="flex w-full items-center justify-center gap-2 rounded-md bg-[#CD0947] py-2.5 text-[13px] font-medium text-white hover:opacity-90"><LogIn size={15}/>Se connecter</button>
-        <p className="text-center text-[10.5px] text-slate-400">Maquette : n'importe quel identifiant/mot de passe fonctionne.</p>
+        <p className="text-center text-[10.5px] text-slate-400">Connectez-vous avec le compte gestionnaire (ADMIN_EMAIL / ADMIN_PASSWORD).</p>
       </div>:<div className="space-y-3">
         <div className="flex items-center gap-2 rounded-md bg-slate-50 px-3 py-2 text-[11.5px] text-slate-600"><ShieldCheck size={16} className="text-[#CD0947]"/>Authentification à deux facteurs — un code a été envoyé par e-mail / SMS.</div>
         <Field label="Code de vérification (6 chiffres)"><Inp value={code} onChange={e=>setCode(e.target.value)} onKeyDown={e=>e.key==="Enter"&&verify()} placeholder="••••••" className="text-center tracking-[0.4em]"/></Field>
         {err&&<div className="rounded-md bg-red-50 px-2.5 py-1.5 text-[11.5px] text-red-700">{err}</div>}
         <button onClick={verify} className="flex w-full items-center justify-center gap-2 rounded-md bg-[#CD0947] py-2.5 text-[13px] font-medium text-white hover:opacity-90"><KeyRound size={15}/>Vérifier & entrer</button>
         <button onClick={()=>{setStep(1);setErr("");}} className="w-full text-center text-[11.5px] text-slate-500 hover:text-slate-800">‹ Retour</button>
-        <p className="text-center text-[10.5px] text-slate-400">Maquette : tapez 6 chiffres (ex. 123456).</p>
+        <p className="text-center text-[10.5px] text-slate-400">Code de votre application d’authentification (si 2FA activée).</p>
       </div>}
       <div className="mt-5 border-t border-slate-100 pt-3 text-center text-[10px] text-slate-400"><Lock size={10} className="mb-0.5 mr-1 inline"/>Connexion sécurisée · D2D3.com SA</div>
     </div>

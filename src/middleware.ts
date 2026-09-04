@@ -10,7 +10,12 @@ const OUVERT = new Set([
   "/api/connexion",
   "/api/connexion/verification",
   "/api/amorcage",
+  "/api/amorcage-geo",
 ]);
+
+// Routes de données protégées en lecture (nécessitent une session).
+const DATA_LECTURE = ["/api/emplacements", "/api/concessions", "/api/cimetieres",
+  "/api/deliberations", "/api/commandes-qr", "/api/declarations"];
 
 async function aUneSession(req: NextRequest): Promise<boolean> {
   const jeton = req.cookies.get("cim_session")?.value;
@@ -31,6 +36,13 @@ export async function middleware(req: NextRequest) {
 
   // Écritures API protégées (hors exceptions)
   if (pathname.startsWith("/api/") && ecriture && !OUVERT.has(pathname)) {
+    if (!(await aUneSession(req))) {
+      return NextResponse.json({ erreur: "Authentification requise." }, { status: 401 });
+    }
+  }
+
+  // Lecture des données métier réservée à une session
+  if (DATA_LECTURE.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     if (!(await aUneSession(req))) {
       return NextResponse.json({ erreur: "Authentification requise." }, { status: 401 });
     }

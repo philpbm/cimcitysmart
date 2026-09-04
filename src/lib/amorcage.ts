@@ -57,14 +57,16 @@ export async function amorcer() {
     await db.inhumation.createMany({ data: part, skipDuplicates: true });
   bilan.inhumations = inhumations.length;
 
-  // 4) Géométrie des emplacements (couche carte)
+  return bilan;
+}
+
+/** Charge la géométrie des emplacements (séparé pour éviter les délais serverless). */
+export async function amorcerGeometrie() {
   await db.emplacement.deleteMany({});
   const empl = (emplacementsData as any[]).map((e) => ({
     ref: e.ref, cimetiere: e.cimetiere, cimCode: e.cimCode || "", geo: JSON.stringify(e.coords),
   }));
-  for (const part of chunk(empl, 800))
+  for (const part of chunk(empl, 400))
     await db.emplacement.createMany({ data: part, skipDuplicates: true });
-  bilan.emplacements = empl.length;
-
-  return bilan;
+  return { emplacements: empl.length };
 }
