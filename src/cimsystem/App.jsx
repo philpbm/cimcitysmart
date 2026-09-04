@@ -550,7 +550,7 @@ function Dossier({rec:rec0,onBack,interventions=[],onAddIntervention,onUpdateRec
         </Card></div>
 
         <div ref={el=>refs.current.etat=el}><Card title="État · désaffection · affichages" icon={<AlertTriangle size={14}/>}>
-          <div className="grid grid-cols-2 gap-x-8"><div><KV k="Code état" v={rec.etat.codeEtat}/><KV k="Travaux" v={rec.etat.travaux}/><KV k="Désaffection" v={rec.etat.desaffection}/></div><div><KV k="Affichage — début" v={rec.etat.affichageDebut} mono/><KV k="Affichage — fin" v={rec.etat.affichageFin} mono/></div></div>
+          <div className="grid grid-cols-2 gap-x-8"><div><KV k="Code état" v={(rec.etat||{}).codeEtat}/><KV k="Travaux" v={(rec.etat||{}).travaux}/><KV k="Désaffection" v={(rec.etat||{}).desaffection}/></div><div><KV k="Affichage — début" v={(rec.etat||{}).affichageDebut} mono/><KV k="Affichage — fin" v={(rec.etat||{}).affichageFin} mono/></div></div>
           {(rec.statut==="echue")&&<div className="mt-3 rounded-md border border-red-200 bg-red-50 p-2.5 text-[11.5px] text-red-800"><Clock size={13} className="mr-1 inline"/>Concession échue — relance d'au moins un ayant droit requise (CDLD L1232-12 §2), avant ouverture de la procédure de reprise.</div>}
         </Card></div>
 
@@ -1584,8 +1584,8 @@ const WAR_SITES=[
   {n:"Monument aux prisonniers politiques 1940‑1945",e:-18,no:-12,t:"Monument"},
   {n:"Monument von Zastrow (1815)",e:-22,no:30,t:"Monument · guerres napoléoniennes"},
 ].map(s=>({...s,lat:WAR_ANCHOR[0]+s.no*_mLat,lng:WAR_ANCHOR[1]+s.e*_mLng}));
-function NamurMap({cem,field,onOpen,focus}){
-  const elRef=useRef(null),mapRef=useRef(null),layerRef=useRef(null),warRef=useRef(null);
+function NamurMap({cem,field,onOpen,focus,empl,statutByRef,onEmpl}){
+  const elRef=useRef(null),mapRef=useRef(null),layerRef=useRef(null),warRef=useRef(null),emplRef=useRef(null);
   const [warOn,setWarOn]=useState(false);
   const [status,setStatus]=useState("idle"),[legend,setLegend]=useState([]);
   const [coord,setCoord]=useState("");
@@ -1652,6 +1652,24 @@ function NamurMap({cem,field,onOpen,focus}){
       g.addTo(m);warRef.current=g;m.setView(WAR_ANCHOR,18);}
   },[warOn]);
   useEffect(()=>{const m=mapRef.current;if(m&&focus&&focus.coord){m.setView(focus.coord,focus.zoom||18,{animate:true});}},[focus]);
+  useEffect(()=>{
+    const map=mapRef.current; if(!map||!empl||!empl.features) return;
+    if(emplRef.current){try{map.removeLayer(emplRef.current);}catch(e){} emplRef.current=null;}
+    const scoped = cem && cem.id!=="all";
+    const feats = empl.features.filter(f=>!scoped || (f.properties&&f.properties.cim_nom===cem.nom));
+    if(!feats.length) return;
+    const colorFor=(ref)=>{const s=(statutByRef||{})[ref]; return s?((STATUTS[s]||{}).ring||"#64748B"):"#94A3B8";};
+    const layer=L.geoJSON({type:"FeatureCollection",features:feats},{
+      renderer:L.canvas(),
+      style:(f)=>{const c=colorFor(f.properties&&f.properties.e_emplacement);return {color:"#1e293b",weight:.4,fillColor:c,fillOpacity:.78};},
+      onEachFeature:(f,lyr)=>{const ref=f.properties&&f.properties.e_emplacement;
+        if(ref){lyr.bindTooltip(ref,{sticky:true});lyr.on("click",()=>onEmpl&&onEmpl(ref));
+          lyr.on("mouseover",()=>lyr.setStyle&&lyr.setStyle({weight:1.4,color:"#CD0947"}));
+          lyr.on("mouseout",()=>lyr.setStyle&&lyr.setStyle({weight:.4,color:"#1e293b"}));}},
+    }).addTo(map);
+    emplRef.current=layer;
+    try{map.fitBounds(layer.getBounds(),{padding:[20,20],maxZoom:20});}catch(e){}
+  },[cem,empl,statutByRef]);
   return(<div className="relative h-full w-full">
     <div ref={elRef} className="h-full w-full" style={{background:"#dfe7da"}}/>
     <div className="absolute left-2 top-2 z-[500] flex items-center gap-1 rounded-md border border-slate-200 bg-white/95 p-1 text-[11px] shadow">
@@ -2843,6 +2861,9 @@ export default function App(){
   const [fcSrc,setFcSrc]=useState(null);
   const pushFC=(o)=>{setFcOrders(s=>[o,...s]);toast("Commande QR transmise à Forever Connected — "+o.produit);envoyerCommandeQR(o);};
   const [dbConcessions,setDbConcessions]=useState(null);
+  const [emplGeo,setEmplGeo]=useState(null);
+  useEffect(()=>{fetch("/gerpinnes_emplacements.geojson").then(r=>r.json()).then(setEmplGeo).catch(()=>{});},[]);
+  const statutByRef=useMemo(()=>{const m={};(dbConcessions||[]).forEach(r=>{m[r.ref]=r.statut;});return m;},[dbConcessions]);
   useEffect(()=>{
     chargerConcessions().then(rows=>{if(rows&&rows.length)setDbConcessions(rows);}).catch(()=>{});
     chargerDeliberations().then(rows=>{if(rows&&rows.length)setDelibs(rows);}).catch(()=>{});
@@ -2992,7 +3013,7 @@ export default function App(){
                 </div>
                 <div className="relative min-h-0 flex-1">
                   {planView==="osm"
-                    ? <NamurMap cem={cemObj} field={thematique==="statut"?"type_specifique":thematique==="duree"?"carre":"type"} onOpen={openFeature} focus={mapFocus}/>
+                    ? <NamurMap cem={cemObj} field={thematique==="statut"?"type_specifique":thematique==="duree"?"carre":"type"} onOpen={openFeature} focus={mapFocus} empl={emplGeo} statutByRef={statutByRef} onEmpl={(ref)=>{ if(recordFor(ref)) setOpenRef(ref); else toast("Emplacement "+ref+" — aucune concession enregistrée"); }}/>
                     : <PlanCanvas plots={PLOTS} selected={null} onSelect={setOpenRef} dim={dimF} colorOf={colorOfH}/>}
                   {showCreate&&<CreateEmplacement onClose={()=>setShowCreate(false)}/>}
                   {showPrint&&<PrintMapModal plots={PLOTS} colorOf={colorOfH} cem={cemObj} onClose={()=>setShowPrint(false)}/>}

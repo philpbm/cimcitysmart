@@ -52,6 +52,13 @@ export function mapConcession(k) {
     },
     inhumes: (k.inhumations || []).map((i) => ({ nom: i.nom, naissance: i.naissance || "", deces: i.deces || "", inhum: i.dateInhum || "", pf: i.pompesFunebres || "" })),
     monument: k.monument ? { placeur: k.monument.marbrier || "", sculpteur: k.monument.sculpteur || "", materiau: k.monument.materiau || "", etat: k.monument.etat || "" } : {},
+    etat: {
+      codeEtat: (k.monument && k.monument.etat) || "—",
+      travaux: "—",
+      desaffection: k.statut === "reprise" ? "Engagée" : "Aucune",
+      affichageDebut: (k.statut === "echue" || k.statut === "reprise") ? "—" : "—",
+      affichageFin: "—",
+    },
     sihl: null,
     _db: true,
   };
