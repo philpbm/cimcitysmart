@@ -647,7 +647,7 @@ function Concessions({onOpen,search,extra,onCreate,defaultCim,onPlan,dbRows}){
   const [flt,setFlt]=useState({...FILTER_DEFAULT,cim:defaultCim||"Tous"});
   const [fopen,setFopen]=useState(true);
   useEffect(()=>{setFlt(s=>({...s,cim:defaultCim||"Tous"}));},[defaultCim]);
-  const all=(dbRows&&dbRows.length)
+  const all=Array.isArray(dbRows)
     ? [...Object.values(extra||{}),...dbRows]
     : [...Object.values(extra||{}),...PLOTS.filter(p=>p.statut!=="libre"&&!(extra&&extra[p.ref])).map(p=>RECORDS[p.ref])];
   const sv=(search||"").toLowerCase();
@@ -655,8 +655,8 @@ function Concessions({onOpen,search,extra,onCreate,defaultCim,onPlan,dbRows}){
   const active=filterActive(flt)||search;
   return(<div className="flex h-full flex-col bg-white">
     <div className="flex items-center justify-between border-b border-slate-100 px-5 pt-4 pb-2">
-      <div><h2 className="text-[15px] font-semibold text-slate-800">Concessions — Namur</h2>
-        <p className="text-[11.5px] text-slate-500">{rows.length} / {all.length} concessions {dbRows&&dbRows.length?<span className="ml-1 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">base de données</span>:null} · cliquez une ligne pour ouvrir le dossier · <span className="inline-flex items-center gap-0.5"><Map size={11}/> pour localiser sur le plan</span></p></div>
+      <div><h2 className="text-[15px] font-semibold text-slate-800">Concessions — Gerpinnes</h2>
+        <p className="text-[11.5px] text-slate-500">{rows.length} / {all.length} concessions {Array.isArray(dbRows)?<span className="ml-1 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">base de données</span>:null} · cliquez une ligne pour ouvrir le dossier · <span className="inline-flex items-center gap-0.5"><Map size={11}/> pour localiser sur le plan</span></p></div>
       <button onClick={()=>setCreate(true)} className="flex items-center gap-1.5 rounded-md bg-[#CD0947] px-3.5 py-2 text-[12.5px] font-medium text-white hover:opacity-90"><FilePlus size={15}/>Créer une concession</button>
     </div>
     <div className="border-b border-slate-200 bg-slate-50 px-5 py-2">
@@ -1585,7 +1585,7 @@ const WAR_SITES=[
   {n:"Monument von Zastrow (1815)",e:-22,no:30,t:"Monument · guerres napoléoniennes"},
 ].map(s=>({...s,lat:WAR_ANCHOR[0]+s.no*_mLat,lng:WAR_ANCHOR[1]+s.e*_mLng}));
 function NamurMap({cem,field,onOpen,focus,empl,statutByRef,onEmpl}){
-  const elRef=useRef(null),mapRef=useRef(null),layerRef=useRef(null),warRef=useRef(null),emplRef=useRef(null);
+  const elRef=useRef(null),mapRef=useRef(null),layerRef=useRef(null),warRef=useRef(null),emplRef=useRef(null),selLayerRef=useRef(null);
   const [warOn,setWarOn]=useState(false);
   const [status,setStatus]=useState("idle"),[legend,setLegend]=useState([]);
   const [coord,setCoord]=useState("");
@@ -1655,17 +1655,32 @@ function NamurMap({cem,field,onOpen,focus,empl,statutByRef,onEmpl}){
   useEffect(()=>{
     const map=mapRef.current; if(!map||!empl||!empl.features) return;
     if(emplRef.current){try{map.removeLayer(emplRef.current);}catch(e){} emplRef.current=null;}
+    selLayerRef.current=null;
     const scoped = cem && cem.id!=="all";
     const feats = empl.features.filter(f=>!scoped || (f.properties&&f.properties.cim_nom===cem.nom));
     if(!feats.length) return;
     const colorFor=(ref)=>{const s=(statutByRef||{})[ref]; return s?((STATUTS[s]||{}).ring||"#64748B"):"#94A3B8";};
+    const base=(f)=>({color:"#1e293b",weight:.4,fillColor:colorFor(f.properties&&f.properties.e_emplacement),fillOpacity:.78});
     const layer=L.geoJSON({type:"FeatureCollection",features:feats},{
       renderer:L.canvas(),
-      style:(f)=>{const c=colorFor(f.properties&&f.properties.e_emplacement);return {color:"#1e293b",weight:.4,fillColor:c,fillOpacity:.78};},
-      onEachFeature:(f,lyr)=>{const ref=f.properties&&f.properties.e_emplacement;
-        if(ref){lyr.bindTooltip(ref,{sticky:true});lyr.on("click",()=>onEmpl&&onEmpl(ref));
-          lyr.on("mouseover",()=>lyr.setStyle&&lyr.setStyle({weight:1.4,color:"#CD0947"}));
-          lyr.on("mouseout",()=>lyr.setStyle&&lyr.setStyle({weight:.4,color:"#1e293b"}));}},
+      style:base,
+      onEachFeature:(f,lyr)=>{const ref=f.properties&&f.properties.e_emplacement; if(!ref)return;
+        lyr.bindTooltip(ref,{sticky:true});
+        lyr.on("mouseover",()=>{if(lyr!==selLayerRef.current)lyr.setStyle({weight:1.4,color:"#CD0947"});});
+        lyr.on("mouseout",()=>{if(lyr!==selLayerRef.current)lyr.setStyle(base(f));});
+        lyr.on("click",()=>{
+          if(selLayerRef.current&&selLayerRef.current!==lyr&&selLayerRef.current.setStyle){const pf=selLayerRef.current.feature;selLayerRef.current.setStyle(base(pf));}
+          lyr.setStyle({weight:3.5,color:"#CD0947",fillOpacity:.9}); if(lyr.bringToFront)lyr.bringToFront();
+          selLayerRef.current=lyr;
+          const st=(statutByRef||{})[ref]; const stl=(STATUTS[st]||{label:"Libre / sans concession"}).label;
+          const el=document.createElement("div"); el.style.font="12px Inter,system-ui,sans-serif";
+          el.innerHTML='<div style="font-weight:600;margin-bottom:1px">'+ref+'</div><div style="color:#64748b;margin-bottom:6px">'+stl+'</div>';
+          const b=document.createElement("button"); b.textContent="Ouvrir la fiche";
+          b.style.cssText="background:#CD0947;color:#fff;border:0;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer";
+          b.onclick=()=>onEmpl&&onEmpl(ref); el.appendChild(b);
+          lyr.bindPopup(el).openPopup();
+        });
+      },
     }).addTo(map);
     emplRef.current=layer;
     try{map.fitBounds(layer.getBounds(),{padding:[20,20],maxZoom:20});}catch(e){}
@@ -1848,8 +1863,9 @@ function PatrimoineNamur({cem}){
 const FILTER_DEFAULT={cim:"Tous",ref:"",allee:"",nature:"Toutes",statut:"Tous",duree:"Toutes",typePers:"Toutes",nom:"",prenom:"",denom1:"",denom2:"",nn:"",lieuNaiss:"",anneeNaiss:"",anneeDeces:"",concessionnaire:"",beneficiaire:"",octroiDe:"",octroiA:"",expDe:"",expA:"",sihlCat:"",pf:"",marbrier:""};
 function _yy(s){const m=(""+s).match(/(\d{4})/);return m?+m[1]:null;}
 function _ic(h,n){return (""+(h||"")).toLowerCase().includes((""+n).toLowerCase());}
+function _norm(s){return (""+(s||"")).trim().toLowerCase().replace(/\s+/g," ");}
 function matchRec(r,v){if(!r)return false;
-  if(v.cim!=="Tous"&&r.cimetiere!==v.cim)return false;
+  if(v.cim!=="Tous"&&_norm(r.cimetiere)!==_norm(v.cim))return false;
   if(v.ref&&!_ic(r.ref,v.ref))return false;
   if(v.allee&&!_ic((r.ref||"").split("/")[0],v.allee))return false;
   if(v.nature!=="Toutes"&&r.nature!==v.nature)return false;
@@ -2867,7 +2883,7 @@ export default function App(){
   const [emplGeo,setEmplGeo]=useState(null);
   const statutByRef=useMemo(()=>{const m={};(dbConcessions||[]).forEach(r=>{m[r.ref]=r.statut;});return m;},[dbConcessions]);
   useEffect(()=>{
-    chargerConcessions().then(rows=>{if(rows&&rows.length)setDbConcessions(rows);}).catch(()=>{});
+    chargerConcessions().then(rows=>setDbConcessions(Array.isArray(rows)?rows:[])).catch(()=>setDbConcessions([]));
     chargerDeliberations().then(rows=>{if(rows&&rows.length)setDelibs(rows);}).catch(()=>{});
     chargerCommandesQR().then(rows=>{if(rows&&rows.length)setFcOrders(rows);}).catch(()=>{});
   },[]);
