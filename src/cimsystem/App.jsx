@@ -423,7 +423,7 @@ function Dossier({rec:rec0,onBack,interventions=[],onAddIntervention,onUpdateRec
     toast("Pièce jointe ajoutée à l'historique");e.target.value="";};
   const archiver=()=>{setRec(r=>({...r,statut:"archive",courriers:[{id:Date.now(),date:"2026-06-25",sens:"Reçu",canal:"Guichet",objet:"Abandon de concession par la famille",type:"Abandon",statut:"Archivé"},...(r.courriers||[])],historique:[{date:"2026-06-25",encodeur:"PB",action:"Mise en archives (abandon famille)",statut:"Validé"},...(r.historique||[])]}));onUpdateRecord&&onUpdateRecord(rec.ref,{statut:"archive"});toast("Concession archivée — disponible à la revente");};
   const remettreEnVente=()=>{setRec(r=>({...r,statut:"libre",historique:[{date:"2026-06-25",encodeur:"PB",action:"Remise en vente",statut:"Validé"},...(r.historique||[])]}));onUpdateRecord&&onUpdateRecord(rec.ref,{statut:"libre"});toast("Concession remise en vente");};
-  const nat=rec.nature?NATURES[rec.nature]:null;const st=STATUTS[rec.statut];
+  const nat=rec.nature?NATURES[rec.nature]:null;const st=STATUTS[rec.statut]||{label:rec.statut||"—",ring:"#64748B"};
   const refs=useRef({});
   const go=k=>{setActive(k);refs.current[k]?.scrollIntoView({behavior:"smooth",block:"start"});};
   const secs=SECTIONS_FILTER(rec);
@@ -669,7 +669,7 @@ function Concessions({onOpen,search,extra,onCreate,defaultCim,onPlan,dbRows}){
     <div className="min-h-0 flex-1 overflow-auto p-5">
     <table className="w-full border-collapse text-[12px]"><thead><tr className="border-b border-slate-200 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
       {["Réf.","Cimetière","Nature","Statut","Dénomination","Octroi","Échéance","Places","Resp.",""].map(h=><th key={h} className="px-2 py-2">{h}</th>)}</tr></thead>
-      <tbody>{rows.slice(0,150).map(r=>{const nat=r.nature?NATURES[r.nature]:null;const st=STATUTS[r.statut];return(
+      <tbody>{rows.slice(0,150).map(r=>{const nat=r.nature?NATURES[r.nature]:null;const st=STATUTS[r.statut]||{label:r.statut||"—",ring:"#64748B"};return(
         <tr key={r.ref} onClick={()=>onOpen(r.ref)} className="cursor-pointer border-b border-slate-100 hover:bg-slate-50">
           <td className="px-2 py-1.5 font-mono font-medium text-slate-800">{r.ref}</td>
           <td className="px-2 py-1.5 text-slate-600">{r.cimetiere}</td>
@@ -700,7 +700,7 @@ function Reprises({onOpen,onDelib}){
       <h2 className="px-1 text-[14px] font-semibold text-slate-800">Procédures de reprise</h2>
       <p className="mb-2 px-1 text-[11px] text-slate-500">État d'abandon · CDLD L1232-12</p>
       {list.map(r=>(<button key={r.ref} onClick={()=>setSel(r.ref)} className={`mb-1 w-full rounded-md border p-2 text-left ${sel===r.ref?"border-slate-800 bg-slate-50":"border-slate-200 hover:bg-slate-50"}`}>
-        <div className="flex items-center justify-between"><span className="font-mono text-[12px] font-semibold">{r.ref}</span><span className="text-[10.5px]" style={{color:STATUTS[r.statut].ring}}>{STATUTS[r.statut].label}</span></div>
+        <div className="flex items-center justify-between"><span className="font-mono text-[12px] font-semibold">{r.ref}</span><span className="text-[10.5px]" style={{color:(STATUTS[r.statut]||{ring:"#64748B"}).ring}}>{(STATUTS[r.statut]||{label:r.statut}).label}</span></div>
         <div className="truncate text-[11px] text-slate-500">{r.denom1}</div></button>))}
     </div>
     <div className="min-w-0 flex-1 overflow-y-auto p-6">
@@ -2235,7 +2235,7 @@ function RepriseImport({onImport}){
       <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
         <table className="w-full text-[12px]"><thead><tr className="border-b border-slate-200 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
           {["Réf.","N° interne","Cimetière","Dénomination","Nature","Statut","Places","Octroi","Échéance"].map(h=><th key={h} className="px-3 py-2">{h}</th>)}</tr></thead>
-          <tbody>{recs.slice(0,200).map((r,i)=>{const nat=NATURES[r.nature];const st=STATUTS[r.statut];return(<tr key={i} className="border-b border-slate-100">
+          <tbody>{recs.slice(0,200).map((r,i)=>{const nat=NATURES[r.nature];const st=STATUTS[r.statut]||{label:r.statut||"—",ring:"#64748B"};return(<tr key={i} className="border-b border-slate-100">
             <td className="px-3 py-1.5 font-mono font-medium text-slate-800">{r.ref}</td><td className="px-3 py-1.5 font-mono text-slate-500">{r.numInterne}</td>
             <td className="px-3 py-1.5 text-slate-600">{r.cimetiere}</td><td className="px-3 py-1.5 text-slate-700">{r.denom1} {r.denom2}</td>
             <td className="px-3 py-1.5">{nat&&<span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{background:nat.color}}/>{nat.label}</span>}</td>
