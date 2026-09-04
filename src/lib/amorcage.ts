@@ -1,74 +1,55 @@
 import bcrypt from "bcryptjs";
 import { db } from "./db";
-import { CIMETIERES, genererConcessions, DELIBERATIONS, COMMANDES_QR } from "./graine";
+import gerpinnes from "./gerpinnes.json";
+
+function chunk<T>(arr: T[], n: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+  return out;
+}
 
 /**
- * Remplit la base de démonstration. Idempotent : relançable sans doublons.
- * Retourne un petit compte-rendu.
+ * Remplit la base avec les données de la commune (Gerpinnes, anonymisées).
+ * Idempotent : efface les cimetières/concessions existants puis réinsère.
+ * Le compte gestionnaire est préservé.
  */
 export async function amorcer() {
+  const g = gerpinnes as any;
   const bilan: Record<string, number> = {};
 
   // 1) Compte gestionnaire
-  const email = (process.env.ADMIN_EMAIL || "admin@namur.be").toLowerCase().trim();
+  const email = (process.env.ADMIN_EMAIL || "admin@gerpinnes.be").toLowerCase().trim();
   const motDePasse = process.env.ADMIN_PASSWORD || "changez-moi";
   await db.utilisateur.upsert({
-    where: { email },
-    update: {},
+    where: { email }, update: {},
     create: { email, nom: "Gestionnaire", role: "ADMIN", motDePasse: await bcrypt.hash(motDePasse, 10) },
   });
   bilan.utilisateurs = 1;
 
-  // 2) Cimetières
-  const idCim: Record<string, string> = {};
-  for (const c of CIMETIERES) {
-    const rec = await db.cimetiere.upsert({
-      where: { nom: c.nom }, update: { commune: c.commune, lat: c.lat, lng: c.lng },
-      create: { nom: c.nom, commune: c.commune, lat: c.lat, lng: c.lng },
-    });
-    idCim[c.nom] = rec.id;
-  }
-  bilan.cimetieres = CIMETIERES.length;
+  // 2) Purge des données existantes (dans l'ordre des dépendances)
+  await db.inhumation.deleteMany({});
+  await db.personne.deleteMany({});
+  await db.monument.deleteMany({});
+  await db.commandeQR.deleteMany({});
+  await db.deliberation.deleteMany({});
+  await db.concession.deleteMany({});
+  await db.cimetiere.deleteMany({});
 
-  // 3) Concessions + personnes + inhumations + monument
-  const concessions = genererConcessions();
-  const idConc: Record<string, string> = {};
-  for (const k of concessions) {
-    const rec = await db.concession.upsert({
-      where: { ref: k.ref },
-      update: {},
-      create: {
-        ref: k.ref, cimetiereId: idCim[k.cimetiere], nature: k.nature, statut: k.statut,
-        denom1: k.denom1, denom2: k.denom2, octroi: k.octroi, expiration: k.expiration,
-        duree: k.duree, placesTot: k.placesTot, placesOcc: k.placesOcc,
-        personnes: { create: k.personnes },
-        inhumations: { create: k.inhumations },
-        monument: { create: k.monument },
-      },
-    });
-    idConc[k.ref] = rec.id;
-  }
-  bilan.concessions = concessions.length;
+  // 3) Insertion Gerpinnes (par lots)
+  await db.cimetiere.createMany({ data: g.cimetieres, skipDuplicates: true });
+  bilan.cimetieres = g.cimetieres.length;
 
-  // 4) Délibérations
-  for (const d of DELIBERATIONS) {
-    const ref = d.extId.split("/").slice(1).join("/").replace("-", "/");
-    await db.deliberation.upsert({
-      where: { extId: d.extId }, update: {},
-      create: { extId: d.extId, objet: d.objet, type: d.type, categorie: d.categorie, groupe: d.groupe, statut: d.statut, seanceDate: d.seanceDate, concessionId: idConc[ref] || null },
-    });
-  }
-  bilan.deliberations = DELIBERATIONS.length;
+  for (const part of chunk(g.concessions, 500))
+    await db.concession.createMany({ data: part, skipDuplicates: true });
+  bilan.concessions = g.concessions.length;
 
-  // 5) Commandes QR
-  for (const q of COMMANDES_QR) {
-    const cid = idConc[q.refConcession] || null;
-    const existe = await db.commandeQR.findFirst({ where: { defunt: q.defunt, produit: q.produit } });
-    if (!existe) {
-      await db.commandeQR.create({ data: { concessionId: cid, defunt: q.defunt, produit: q.produit, prix: q.prix, statut: q.statut, tribute: q.tribute, courriel: q.courriel } });
-    }
-  }
-  bilan.commandesQR = COMMANDES_QR.length;
+  for (const part of chunk(g.personnes, 1000))
+    await db.personne.createMany({ data: part, skipDuplicates: true });
+  bilan.personnes = g.personnes.length;
+
+  for (const part of chunk(g.inhumations, 1000))
+    await db.inhumation.createMany({ data: part, skipDuplicates: true });
+  bilan.inhumations = g.inhumations.length;
 
   return bilan;
 }

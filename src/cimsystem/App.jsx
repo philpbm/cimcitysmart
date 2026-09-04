@@ -48,14 +48,18 @@ const STATUTS = {
   archive:{label:"Archivée",ring:"#6D28D9"},
 };
 const CEMETERIES=[
-  {id:"belgrade",nom:"Belgrade",commune:"Namur",coord:[50.4732,4.8344]},
-  {id:"bouge",nom:"Bouge",commune:"Namur",coord:[50.4789,4.8889]},
-  {id:"saint-servais",nom:"Saint-Servais",commune:"Namur",coord:[50.4720,4.8430]},
-  {id:"jambes",nom:"Jambes",commune:"Namur",coord:[50.4575,4.8722]},
-  {id:"bomel",nom:"Bomel",commune:"Namur",coord:[50.4715,4.8665]},
-  {id:"malonne",nom:"Malonne",commune:"Namur",coord:[50.4399,4.8200]},
+  {id:"flaches",nom:"Flaches",commune:"Gerpinnes",coord:[50.339967,4.484227]},
+  {id:"acoz",nom:"Acoz",commune:"Gerpinnes",coord:[50.358379,4.512296]},
+  {id:"hymiee",nom:"Hymiée",commune:"Gerpinnes",coord:[50.32315,4.530522]},
+  {id:"villers",nom:"Villers-Poterie",commune:"Gerpinnes",coord:[50.354914,4.541045]},
+  {id:"joncret",nom:"Joncret",commune:"Gerpinnes",coord:[50.352989,4.502624]},
+  {id:"gendarmerie",nom:"Gerpinnes - Gendarmerie",commune:"Gerpinnes",coord:[50.334168,4.508139]},
+  {id:"loverval",nom:"Loverval",commune:"Gerpinnes",coord:[50.375579,4.462618]},
+  {id:"fromiee",nom:"Fromiée",commune:"Gerpinnes",coord:[50.329661,4.5639]},
+  {id:"centre",nom:"Gerpinnes-Centre",commune:"Gerpinnes",coord:[50.33768,4.515726]},
+  {id:"gougnies",nom:"Gougnies",commune:"Gerpinnes",coord:[50.357904,4.568197]},
 ];
-const CIM_BY_ALLEE={ALM:"Belgrade",OSS:"Belgrade",BRT:"Bouge",ET:"Bouge",CHE:"Saint-Servais",PH:"Saint-Servais",DUM:"Jambes",DISP:"Jambes",GIS:"Bomel"};
+const CIM_BY_ALLEE={};
 
 const PRENOMS_H=["Jean","Pierre","Louis","Paul","Marcel","André","Georges","Henri","Albert","Émile","François","Joseph","Victor","Marcel","Fernand","Léon","Robert","Gaston"];
 const PRENOMS_F=["Marie","Anne","Jeanne","Élise","Yvonne","Suzanne","Léa","Camille","Rose","Madeleine","Sophie","Claire","Hélène","Gabrielle","Berthe","Simonne","Denise"];
@@ -1597,7 +1601,7 @@ function NamurMap({cem,field,onOpen,focus}){
   const palette=["#1D48CC","#2E971F","#E6790A","#854B3D","#FD6786","#8E7CC3","#7D7C83","#A88E6A","#4F5B62","#6B7A45","#C0392B","#3a5aa0","#0E7490","#9D174D"];
   const colorFor=v=>{const c=colorsRef.current;if(!(v in c))c[v]=palette[Object.keys(c).length%palette.length];return c[v];};
   useEffect(()=>{if(mapRef.current)return;
-    const map=L.map(elRef.current,{zoomControl:true,preferCanvas:true}).setView(cem?.coord||[50.4671,4.8583],17);
+    const map=L.map(elRef.current,{zoomControl:true,preferCanvas:true}).setView(cem?.coord||[50.3377,4.5157],17);
     const osm=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:21,attribution:"© OpenStreetMap"});
     const aer=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:21,attribution:"© Esri"});
     const wal=L.tileLayer.wms("https://geoservices.wallonie.be/arcgis/services/IMAGERIE/ORTHO_LAST/MapServer/WMSServer",{layers:"0",format:"image/jpeg",version:"1.3.0",maxZoom:21,attribution:"Orthophotos © SPW — Géoportail de Wallonie"});
@@ -2820,7 +2824,7 @@ function OpenMapPublic({cems,cemObj,onQR}){
 export default function App(){
   const [authed,setAuthed]=useState(false);
   const [authUser,setAuthUser]=useState("");
-  const [commune,setCommune]=useState("Namur");
+  const [commune,setCommune]=useState("Gerpinnes");
   const [ins,setIns]=useState("92094");
   const [mfa,setMfa]=useState(true);
   const [users,setUsers]=useState([
@@ -2910,7 +2914,7 @@ export default function App(){
   const dimH=useCallback(p=>{if(planHist){const oc=yearOf(RECORDS[p.ref]?.octroi);return oc?planYear<oc:false;}return dim(p);},[planHist,planYear,dim]);
   const [planView,setPlanView]=useState("osm");
   const [showPrint,setShowPrint]=useState(false);
-  const cemObj=cem==="all"?{id:"all",nom:"Namur (tous)",commune:"Namur",coord:[50.4671,4.8583]}:(cems.find(c=>c.id===cem)||cems[0]);
+  const cemObj=cem==="all"?{id:"all",nom:"Gerpinnes (tous)",commune:"Gerpinnes",coord:[50.3377,4.5157]}:(cems.find(c=>c.id===cem)||cems[0]);
   const selCimDemo=cem==="all"?"Tous":cemObj.nom;
   const PF2_BASE=FILTER_DEFAULT;
   const [pf2,setPf2]=useState({...FILTER_DEFAULT,cim:CEMETERIES[0].nom});
