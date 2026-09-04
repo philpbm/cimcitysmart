@@ -43,13 +43,18 @@ export async function amorcer() {
     await db.concession.createMany({ data: part, skipDuplicates: true });
   bilan.concessions = g.concessions.length;
 
-  for (const part of chunk(g.personnes, 1000))
-    await db.personne.createMany({ data: part, skipDuplicates: true });
-  bilan.personnes = g.personnes.length;
+  // filet de sécurité : ne garder que les enfants dont la concession existe bien
+  const ids = new Set((await db.concession.findMany({ select: { id: true } })).map((c) => c.id));
+  const personnes = (g.personnes as any[]).filter((p) => ids.has(p.concessionId));
+  const inhumations = (g.inhumations as any[]).filter((i) => ids.has(i.concessionId));
 
-  for (const part of chunk(g.inhumations, 1000))
+  for (const part of chunk(personnes, 1000))
+    await db.personne.createMany({ data: part, skipDuplicates: true });
+  bilan.personnes = personnes.length;
+
+  for (const part of chunk(inhumations, 1000))
     await db.inhumation.createMany({ data: part, skipDuplicates: true });
-  bilan.inhumations = g.inhumations.length;
+  bilan.inhumations = inhumations.length;
 
   return bilan;
 }
