@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     { personnes: { some: { nom: { contains: q, mode: "insensitive" } } } },
   ];
   const concessions = await db.concession.findMany({
-    where, orderBy: { ref: "asc" }, take: 500,
+    where, orderBy: { ref: "asc" }, take: 10000,
     include: { cimetiere: true, personnes: true, inhumations: true, monument: true },
   });
   return NextResponse.json(concessions);

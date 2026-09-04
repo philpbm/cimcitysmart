@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { db } from "./db";
 import gerpinnes from "./gerpinnes.json";
+import emplacementsData from "./emplacements.json";
 
 function chunk<T>(arr: T[], n: number): T[][] {
   const out: T[][] = [];
@@ -55,6 +56,15 @@ export async function amorcer() {
   for (const part of chunk(inhumations, 1000))
     await db.inhumation.createMany({ data: part, skipDuplicates: true });
   bilan.inhumations = inhumations.length;
+
+  // 4) Géométrie des emplacements (couche carte)
+  await db.emplacement.deleteMany({});
+  const empl = (emplacementsData as any[]).map((e) => ({
+    ref: e.ref, cimetiere: e.cimetiere, cimCode: e.cimCode || "", geo: JSON.stringify(e.coords),
+  }));
+  for (const part of chunk(empl, 800))
+    await db.emplacement.createMany({ data: part, skipDuplicates: true });
+  bilan.emplacements = empl.length;
 
   return bilan;
 }

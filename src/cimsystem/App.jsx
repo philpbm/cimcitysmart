@@ -499,7 +499,7 @@ function Dossier({rec:rec0,onBack,interventions=[],onAddIntervention,onUpdateRec
           {rec.inhumes.length?(<table className="w-full text-[12px]"><thead><tr className="text-left text-[10.5px] uppercase tracking-wide text-slate-400"><th className="py-1">Défunt</th><th>Naissance</th><th>Décès</th><th>Inhumation</th><th>Pompes funèbres</th></tr></thead>
             <tbody>{rec.inhumes.map((x,i)=>(<tr key={i} className="border-t border-slate-100"><td className="py-1.5 font-medium text-slate-800">{x.nom}</td><td className="font-mono text-slate-500">{x.naissance}</td><td className="font-mono text-slate-500">{x.deces}</td><td className="font-mono text-slate-500">{x.inhum}</td><td className="text-slate-600">{x.pf}</td></tr>))}</tbody></table>):<p className="text-[12px] italic text-slate-400">Aucune inhumation enregistrée.</p>}
           <div className="mt-3 grid grid-cols-3 gap-x-8 border-t border-slate-100 pt-2">
-            <KV k="Destination des cendres" v={rec.cendres.destination}/><KV k="Conservation à domicile" v={rec.cendres.conservationDomicile}/><KV k="Déplacements" v={rec.deplacements}/></div>
+            <KV k="Destination des cendres" v={(rec.cendres||{}).destination}/><KV k="Conservation à domicile" v={(rec.cendres||{}).conservationDomicile}/><KV k="Déplacements" v={rec.deplacements}/></div>
           {rec._saphir&&<div className="mt-3 border-t border-slate-100 pt-3"><NamurDefuntsByFeature saphir={rec._saphir}/></div>}
         </Card></div>
 
@@ -546,7 +546,7 @@ function Dossier({rec:rec0,onBack,interventions=[],onAddIntervention,onUpdateRec
         </Card></div>
 
         <div ref={el=>refs.current.pro=el}><Card title="Prorogations / maintiens" icon={<RotateCcw size={14}/>}>
-          {rec.prorogations.length?rec.prorogations.map((p,i)=>(<div key={i} className="grid grid-cols-4 gap-x-6 border-t border-slate-100 py-1.5 text-[12px] first:border-0"><span><span className="text-slate-400">Demande </span><span className="font-mono">{p.dateDemande}</span></span><span><span className="text-slate-400">Durée </span>{p.duree}</span><span><span className="text-slate-400">Collège </span>{p.accordCollege}</span><span><span className="text-slate-400">Date </span><span className="font-mono">{p.date}</span></span></div>)):<p className="text-[12px] italic text-slate-400">Aucune prorogation.</p>}
+          {(rec.prorogations||[]).length?(rec.prorogations||[]).map((p,i)=>(<div key={i} className="grid grid-cols-4 gap-x-6 border-t border-slate-100 py-1.5 text-[12px] first:border-0"><span><span className="text-slate-400">Demande </span><span className="font-mono">{p.dateDemande}</span></span><span><span className="text-slate-400">Durée </span>{p.duree}</span><span><span className="text-slate-400">Collège </span>{p.accordCollege}</span><span><span className="text-slate-400">Date </span><span className="font-mono">{p.date}</span></span></div>)):<p className="text-[12px] italic text-slate-400">Aucune prorogation.</p>}
         </Card></div>
 
         <div ref={el=>refs.current.etat=el}><Card title="État · désaffection · affichages" icon={<AlertTriangle size={14}/>}>
@@ -561,16 +561,16 @@ function Dossier({rec:rec0,onBack,interventions=[],onAddIntervention,onUpdateRec
         </Card></div>}
 
         <div ref={el=>refs.current.doc=el}><Card title="Documents" icon={<FileSignature size={14}/>}>
-          {rec.documents.map((dd,i)=>(<div key={i} className="flex items-center justify-between border-t border-slate-100 py-1.5 text-[12px] first:border-0"><span className="flex items-center gap-2 text-slate-700"><FileText size={13} className="text-slate-400"/>{dd.nom}</span><span className="font-mono text-slate-400">{dd.date}</span></div>))}
+          {(rec.documents||[]).map((dd,i)=>(<div key={i} className="flex items-center justify-between border-t border-slate-100 py-1.5 text-[12px] first:border-0"><span className="flex items-center gap-2 text-slate-700"><FileText size={13} className="text-slate-400"/>{dd.nom}</span><span className="font-mono text-slate-400">{dd.date}</span></div>))}
         </Card></div>
 
         <div ref={el=>refs.current.notes=el}><Card title="Notes / images terrain" icon={<ImageIcon size={14}/>}>
-          <div className="grid grid-cols-2 gap-x-8"><div><KV k="Monument" v={rec.notesTerrain.monument}/><KV k="Épitaphes" v={rec.notesTerrain.epitaphes}/></div><div><KV k="État" v={rec.notesTerrain.etat}/><KV k="Réparation" v={rec.notesTerrain.reparation}/></div></div>
+          <div className="grid grid-cols-2 gap-x-8"><div><KV k="Monument" v={(rec.notesTerrain||{}).monument}/><KV k="Épitaphes" v={(rec.notesTerrain||{}).epitaphes}/></div><div><KV k="État" v={(rec.notesTerrain||{}).etat}/><KV k="Réparation" v={(rec.notesTerrain||{}).reparation}/></div></div>
         </Card></div>
 
         <div ref={el=>refs.current.hist=el}><Card title="Historique des modifications" icon={<History size={14}/>}>
           <table className="w-full text-[12px]"><thead><tr className="text-left text-[10.5px] uppercase tracking-wide text-slate-400"><th className="py-1">Date</th><th>Encodeur</th><th>Action</th><th>Statut</th></tr></thead>
-          <tbody>{rec.historique.map((h,i)=>(<tr key={i} className="border-t border-slate-100"><td className="py-1.5 font-mono text-slate-500">{h.date}</td><td className="text-slate-700">{h.encodeur}</td><td className="text-slate-700">{h.action}</td><td><span className={h.statut==="Validé"?"text-green-600":"text-amber-600"}>{h.statut}</span></td></tr>))}</tbody></table>
+          <tbody>{(rec.historique||[]).map((h,i)=>(<tr key={i} className="border-t border-slate-100"><td className="py-1.5 font-mono text-slate-500">{h.date}</td><td className="text-slate-700">{h.encodeur}</td><td className="text-slate-700">{h.action}</td><td><span className={h.statut==="Validé"?"text-green-600":"text-amber-600"}>{h.statut}</span></td></tr>))}</tbody></table>
         </Card></div>
 
         <div className="flex gap-2 pb-6">
@@ -2862,7 +2862,6 @@ export default function App(){
   const pushFC=(o)=>{setFcOrders(s=>[o,...s]);toast("Commande QR transmise à Forever Connected — "+o.produit);envoyerCommandeQR(o);};
   const [dbConcessions,setDbConcessions]=useState(null);
   const [emplGeo,setEmplGeo]=useState(null);
-  useEffect(()=>{fetch("/gerpinnes_emplacements.geojson").then(r=>r.json()).then(setEmplGeo).catch(()=>{});},[]);
   const statutByRef=useMemo(()=>{const m={};(dbConcessions||[]).forEach(r=>{m[r.ref]=r.statut;});return m;},[dbConcessions]);
   useEffect(()=>{
     chargerConcessions().then(rows=>{if(rows&&rows.length)setDbConcessions(rows);}).catch(()=>{});
@@ -2937,6 +2936,12 @@ export default function App(){
   const [showPrint,setShowPrint]=useState(false);
   const cemObj=cem==="all"?{id:"all",nom:"Gerpinnes (tous)",commune:"Gerpinnes",coord:[50.3377,4.5157]}:(cems.find(c=>c.id===cem)||cems[0]);
   const selCimDemo=cem==="all"?"Tous":cemObj.nom;
+  useEffect(()=>{
+    const q=cem==="all"?"":`?cimetiere=${encodeURIComponent(cemObj.nom)}`;
+    let annule=false;
+    fetch(`/api/emplacements${q}`).then(r=>r.json()).then(fc=>{if(!annule)setEmplGeo(fc);}).catch(()=>{});
+    return ()=>{annule=true;};
+  },[cem]);
   const PF2_BASE=FILTER_DEFAULT;
   const [pf2,setPf2]=useState({...FILTER_DEFAULT,cim:CEMETERIES[0].nom});
   useEffect(()=>{setPf2(s=>({...s,cim:selCimDemo}));},[selCimDemo]);

@@ -143,6 +143,17 @@ model CommandeQR {
   @@index([concessionId])
 }
 
+/// Géométrie d'un emplacement (polygone), servie à la carte. Jointure par ref = e_emplacement.
+model Emplacement {
+  id        String @id @default(cuid())
+  ref       String @unique
+  cimetiere String
+  cimCode   String @default("")
+  geo       String // JSON des coordonnées (MultiPolygon, WGS84)
+
+  @@index([cimetiere])
+}
+
 /// Déclaration de décès / demande d'inhumation déposée par une entreprise de pompes funèbres.
 model Declaration {
   id             String   @id @default(cuid())
